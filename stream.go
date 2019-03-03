@@ -312,7 +312,17 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		grpclog.Warningf("grpcdebug: newClientStream: target=%v newAttemptLocked time: %v", cc.Target(), elapsed2)
 	}
 
-	op := func(a *csAttempt) error { return a.newStream() }
+	op := func(a *csAttempt) error {
+		now := time.Now()
+		defer func() {
+			elapsed := time.Since(now)
+			if elapsed > 100*time.Millisecond {
+				grpclog.Warningf("grpcdebug: newClientStream: target=%v newStream time: %v", cc.Target(), elapsed)
+			}
+		}()
+
+		return a.newStream()
+	}
 	now3 := time.Now()
 	if err := cs.withRetry(op, func() { cs.bufferForRetryLocked(0, op) }); err != nil {
 		elapsed3 := time.Since(now3)
@@ -597,8 +607,13 @@ func (cs *clientStream) Context() context.Context {
 }
 
 func (cs *clientStream) withRetry(op func(a *csAttempt) error, onSuccess func()) error {
+	now := time.Now()
 	cs.mu.Lock()
 	for {
+		elapsed := time.Since(now)
+		if elapsed > 100*time.Millisecond {
+			grpclog.Warningf("grpcdebug: clientStream: target=%v withRetry time: %v, retry %d p=%p", cs.cc.Target(), elapsed, cs.numRetries, cs.attempt)
+		}
 		if cs.committed {
 			cs.mu.Unlock()
 			return op(cs.attempt)
