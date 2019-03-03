@@ -1084,6 +1084,10 @@ func (ac *addrConn) resetTransport() {
 		}
 		ac.updateConnectivityState(connectivity.TransientFailure)
 
+		if ac.backoffIdx == 0 {
+			backoffFor = 0
+		}
+
 		// Backoff.
 		b := ac.resetBackoff
 		timer := time.NewTimer(backoffFor)
