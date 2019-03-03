@@ -156,6 +156,14 @@ func NewClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 }
 
 func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, method string, opts ...CallOption) (_ ClientStream, err error) {
+	now := time.Now()
+	defer func() {
+		elapsed := time.Since(now)
+		if elapsed > 200*time.Millisecond {
+			grpclog.Warningf("grpcdebug: newClientStream: target=%v whole time: %v", cc.Target(), elapsed)
+		}
+	}()
+
 	if channelz.IsOn() {
 		cc.incrCallsStarted()
 		defer func() {
