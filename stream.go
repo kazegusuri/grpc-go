@@ -301,7 +301,7 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 	if err := cs.newAttemptLocked(sh, trInfo); err != nil {
 		elapsed2 := time.Since(now2)
 		if elapsed2 > 100*time.Millisecond {
-			grpclog.Warningf("grpcdebug: newClientStream: target=%v newAttemptLocked time: %v", cc.Target(), elapsed2)
+			grpclog.Warningf("grpcdebug: newClientStream: target=%v %p newAttemptLocked time: %v", cc.Target(), cs, elapsed2)
 		}
 
 		cs.finish(err)
@@ -309,7 +309,7 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 	}
 	elapsed2 := time.Since(now2)
 	if elapsed2 > 100*time.Millisecond {
-		grpclog.Warningf("grpcdebug: newClientStream: target=%v newAttemptLocked time: %v", cc.Target(), elapsed2)
+		grpclog.Warningf("grpcdebug: newClientStream: target=%v %p newAttemptLocked time: %v", cc.Target(), cs, elapsed2)
 	}
 
 	op := func(a *csAttempt) error {
@@ -317,7 +317,7 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		defer func() {
 			elapsed := time.Since(now)
 			if elapsed > 100*time.Millisecond {
-				grpclog.Warningf("grpcdebug: newClientStream: target=%v newStream time: %v", cc.Target(), elapsed)
+				grpclog.Warningf("grpcdebug: newClientStream: target=%v %p newStream time: %v", cc.Target(), cs, elapsed)
 			}
 		}()
 
@@ -327,7 +327,7 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 	if err := cs.withRetry(op, func() { cs.bufferForRetryLocked(0, op) }); err != nil {
 		elapsed3 := time.Since(now3)
 		if elapsed3 > 100*time.Millisecond {
-			grpclog.Warningf("grpcdebug: newClientStream: target=%v bufferForRetryLocked time: %v", cc.Target(), elapsed3)
+			grpclog.Warningf("grpcdebug: newClientStream: target=%v %p bufferForRetryLocked time: %v", cc.Target(), cs, elapsed3)
 		}
 
 		cs.finish(err)
@@ -335,7 +335,7 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 	}
 	elapsed3 := time.Since(now3)
 	if elapsed3 > 100*time.Millisecond {
-		grpclog.Warningf("grpcdebug: newClientStream: target=%v bufferForRetryLocked time: %v", cc.Target(), elapsed3)
+		grpclog.Warningf("grpcdebug: newClientStream: target=%v %p bufferForRetryLocked time: %v", cc.Target(), cs, elapsed3)
 	}
 
 	if cs.binlog != nil {
@@ -621,7 +621,13 @@ func (cs *clientStream) withRetry(op func(a *csAttempt) error, onSuccess func())
 		a := cs.attempt
 		cs.mu.Unlock()
 		err := op(a)
+		now2 := time.Now()
 		cs.mu.Lock()
+		elapsed2 := time.Since(now2)
+		if elapsed2 > 100*time.Millisecond {
+			grpclog.Warningf("grpcdebug: clientStream: target=%v Lock2 time: %v, retry %d p=%p", cs.cc.Target(), elapsed2, cs.numRetries, cs.attempt)
+		}
+
 		if a != cs.attempt {
 			// We started another attempt already.
 			continue
