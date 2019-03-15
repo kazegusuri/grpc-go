@@ -852,6 +852,14 @@ func (cs *clientStream) CloseSend() error {
 }
 
 func (cs *clientStream) finish(err error) {
+	now := time.Now()
+	defer func() {
+		elapsed := time.Since(now)
+		if elapsed > 200*time.Millisecond {
+			grpclog.Warningf("grpcdebug: clientStream: target=%v finish time: %v", cs.cc.Target(), elapsed)
+		}
+	}()
+
 	if err == io.EOF {
 		// Ending a stream with EOF indicates a success.
 		err = nil

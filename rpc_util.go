@@ -704,6 +704,14 @@ func recvAndDecompress(p *parser, s *transport.Stream, dc Decompressor, maxRecei
 // dc takes precedence over compressor.
 // TODO(dfawley): wrap the old compressor/decompressor using the new API?
 func recv(p *parser, c baseCodec, s *transport.Stream, dc Decompressor, m interface{}, maxReceiveMessageSize int, payInfo *payloadInfo, compressor encoding.Compressor) error {
+	now := time.Now()
+	defer func() {
+		elapsed := time.Since(now)
+		if elapsed > 300*time.Millisecond {
+			grpclog.Warningf("grpcdebug: recv time: %v", elapsed)
+		}
+	}()
+
 	d, err := recvAndDecompress(p, s, dc, maxReceiveMessageSize, payInfo, compressor)
 	if err != nil {
 		return err
